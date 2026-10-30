@@ -1,10 +1,21 @@
 import { CAT_LABEL, CAT_TONE, pct, sign } from './fmt'
 
-export const Pill = ({ cat, children, tone }) => (
-  <span className={`pill ${tone || CAT_TONE[cat] || 'grey'}`}>{children || CAT_LABEL[cat] || cat}</span>
+export const Tag = ({ cat, children, tone }) => (
+  <span className={`tag ${tone || CAT_TONE[cat] || 'grey'}`}>{children || CAT_LABEL[cat] || cat}</span>
 )
 
-export const Delta = ({ v, d = 1 }) => <span className={`d num ${sign(v)}`}>{pct(v, d)}</span>
+export const Delta = ({ v, d = 1 }) => <span className={`d ${sign(v)}`}>{pct(v, d)}</span>
+
+export function Masthead({ right }) {
+  const d = new Date()
+  const date = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
+  return (
+    <div className="mast">
+      <span className="brand">Fi<i>nn</i></span>
+      <span className="line">{date}<br />{right}</span>
+    </div>
+  )
+}
 
 export function Spark({ data, w = 64, h = 22 }) {
   if (!data || data.length < 2) return null
@@ -23,7 +34,7 @@ export function Bars({ labels, values, title, unit, fmt }) {
   const max = Math.max(...vals.map(Math.abs), 1)
   const last = vals[vals.length - 1]
   return (
-    <div>
+    <div className="chart">
       <div className="chart-title"><span>{title}</span><b className="num">{fmt ? fmt(last) : last}{unit ? ` ${unit}` : ''}</b></div>
       <div className="bars">
         {vals.map((v, i) => (
@@ -43,6 +54,8 @@ export function Bullet({ text }) {
   return <li>{parts.map((p, i) => (p.startsWith('[') ? <Source key={i}>{p.slice(1, -1)}</Source> : p))}</li>
 }
 
+export const Stat = ({ k, v, cls }) => <span><span className="k">{k}</span><b className={cls || 'num'}>{v ?? '–'}</b></span>
+
 export const Icon = ({ name }) => {
   const d = {
     today: 'M4 5h16v14H4zM4 9h16M8 3v4M16 3v4',
@@ -50,5 +63,5 @@ export const Icon = ({ name }) => {
     research: 'M10 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM14.5 14.5 20 20',
     ask: 'M4 5h16v11H9l-5 4z',
   }[name]
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 }
