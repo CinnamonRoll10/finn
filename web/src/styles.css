@@ -14,6 +14,7 @@
   --down: #a8321f;
   --flag: #b07a12;
   --flag-bg: #f3e6c4;
+  --bar: #ddd6c6;
   --serif: 'Fraunces', 'Iowan Old Style', 'Palatino', Georgia, serif;
   --sans: 'IBM Plex Sans', -apple-system, system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -26,7 +27,7 @@
     --ink: #ece6d8; --ink-2: #bdb5a4; --ink-3: #847c6e;
     --rule: #2f2b25; --rule-strong: #ece6d8;
     --accent: #e0714a; --accent-ink: #f0906e;
-    --up: #5cc08a; --down: #ef7a66; --flag: #e2b24a; --flag-bg: #3a2f12;
+    --up: #5cc08a; --down: #ef7a66; --flag: #e2b24a; --flag-bg: #3a2f12; --bar: #3b362e;
   }
 }
 :root[data-theme="dark"] {
@@ -34,7 +35,7 @@
   --ink: #ece6d8; --ink-2: #bdb5a4; --ink-3: #847c6e;
   --rule: #2f2b25; --rule-strong: #ece6d8;
   --accent: #e0714a; --accent-ink: #f0906e;
-  --up: #5cc08a; --down: #ef7a66; --flag: #e2b24a; --flag-bg: #3a2f12;
+  --up: #5cc08a; --down: #ef7a66; --flag: #e2b24a; --flag-bg: #3a2f12; --bar: #3b362e;
 }
 
 * { box-sizing: border-box; }
@@ -163,7 +164,7 @@ input:focus { border-color: var(--accent); }
 .hero .meta > span { flex: 1; display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--rule); padding-left: 10px; }
 .hero .meta > span:first-child { border-left: 0; padding-left: 0; }
 .hero .meta .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
-.hero .meta b { font-family: var(--mono); font-weight: 600; font-size: 14px; }
+.hero .meta b { font-family: var(--mono); font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
 .one { font-family: var(--serif); font-style: italic; font-size: 17px; line-height: 1.35; color: var(--ink-2); margin: 14px 0 4px; font-variation-settings: 'opsz' 20; }
 .tabs { display: flex; gap: 0; overflow-x: auto; border-bottom: 1px solid var(--rule); margin: 10px calc(-1 * var(--gutter)) 12px; padding: 0 var(--gutter); scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
@@ -194,7 +195,7 @@ input:focus { border-color: var(--accent); }
 .chart-title { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
 .chart-title b { color: var(--ink); font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 600; }
 .bars { display: flex; align-items: flex-end; gap: 5px; height: 64px; margin: 8px 0 3px; border-bottom: 1px solid var(--rule-strong); }
-.bars .b { flex: 1; background: var(--paper-3); min-height: 2px; position: relative; }
+.bars .b { flex: 1; background: var(--bar); min-height: 2px; position: relative; }
 .bars .b.neg { background: var(--down); opacity: .5; }
 .bars .b.last { background: var(--accent); }
 .axis { display: flex; gap: 5px; font-size: 9.5px; color: var(--ink-3); font-family: var(--mono); letter-spacing: .04em; }
