@@ -92,5 +92,7 @@ The engine is not tied to the demo lists: `/api/research/POLYCAB/build` works fo
 
 * NSE's API needs a cookie handshake and occasionally rate-limits; failures are reported per symbol in the digest and retried on the next refresh. BSE's API blocks non-browser clients, so filings come from NSE only.
 * Scanned-image PDFs yield no text; results then fall back to screener's standardised table once it has the quarter.
+* Company-hosted transcript links on screener.in are sometimes dead or block scripts; FINN then looks for the copy the company filed with NSE. Companies that hold no earnings calls (e.g. ITC) get research from the annual report and numbers only.
+* Malformed model JSON is retried with the parse error fed back; large PDF downloads are verified against Content-Length.
 * Prices are end-of-day (yfinance), so price/volume alerts fire after close, not intraday.
 * The ledger judges guidance against reported numbers; where guidance is qualitative it judges direction and says so.

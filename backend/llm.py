@@ -120,10 +120,24 @@ class LLM:
         store.put("llm", key, {"text": text, "model": model, "ts": time.time()})
         return text
 
-    def json(self, prompt: str, **kw) -> dict | list:
-        """complete() + tolerant JSON parsing (handles code fences / prose)."""
+    def json(self, prompt: str, retries: int = 2, **kw) -> dict | list:
+        """complete() + tolerant JSON parsing (handles code fences / prose).
+        A malformed answer is retried once or twice without the cache, with the
+        model told exactly where its previous output broke."""
         text = self.complete(prompt, **kw)
-        return parse_json(text)
+        for attempt in range(retries + 1):
+            try:
+                return parse_json(text)
+            except (ValueError, json.JSONDecodeError) as e:
+                if attempt == retries:
+                    raise
+                kw["use_cache"] = False
+                text = self.complete(
+                    prompt + f"\n\nYour previous answer was not valid JSON ({str(e)[:80]}). "
+                    "Return the same content as strictly valid JSON only: double quotes, no trailing commas, "
+                    "escape quotes inside strings, no commentary.",
+                    **kw,
+                )
 
     # ------------------------------------------------------------ providers
     def _call_anthropic(self, model, tier, system, prompt, max_tokens):

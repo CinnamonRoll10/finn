@@ -6,6 +6,7 @@ We keep one session, refresh cookies when a call fails, and cache each
 """
 from __future__ import annotations
 
+import re
 import threading
 import time
 from datetime import date, datetime, timedelta
@@ -112,3 +113,23 @@ def fetch_portfolio(symbols: list[str], hours: int | None = None,
             failed.append(sym)
     items.sort(key=lambda x: x["time"], reverse=True)
     return items, failed
+
+
+TRANSCRIPT_RE = re.compile(r"transcript", re.I)
+
+
+def find_transcripts(symbol: str, months: int = 15) -> list[dict]:
+    """Earnings-call transcripts the company filed with NSE (fallback when a
+    company-hosted link from screener.in is dead or blocked)."""
+    end = date.today()
+    start = end - timedelta(days=30 * months)
+    out = []
+    try:
+        anns = fetch_announcements(symbol, start, end)
+    except Exception:
+        return out
+    for a in anns:
+        if a.get("pdf_url") and TRANSCRIPT_RE.search(a.get("subject") or "") and not re.search(r"audio|video|recording", a.get("subject") or "", re.I):
+            dt = datetime.fromisoformat(a["time"])
+            out.append({"label": dt.strftime("%b %Y"), "transcript": a["pdf_url"], "ppt": None, "via": "nse"})
+    return out

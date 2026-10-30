@@ -102,12 +102,16 @@ def _scrape(symbol: str) -> dict:
                     "ppt": links.get("PPT"),
                 })
     annual_reports.sort(key=lambda a: -a["year"])
-    # dedupe transcripts by url, keep order (newest first on screener)
-    seen, uniq = set(), []
+    # one transcript per call month, preferring exchange-hosted PDFs over
+    # company sites (which often block scripts or serve HTML viewers)
+    by_label: dict[str, dict] = {}
     for c in concalls:
-        if c["transcript"] and c["transcript"] not in seen:
-            seen.add(c["transcript"])
-            uniq.append(c)
+        if not c["transcript"]:
+            continue
+        cur = by_label.get(c["label"])
+        if cur is None or ("bseindia" in c["transcript"] or "nseindia" in c["transcript"]) and not ("bseindia" in cur["transcript"] or "nseindia" in cur["transcript"]):
+            by_label[c["label"]] = c
+    uniq = list(by_label.values())
     sector = ""
     for a in s.select(".company-links a, .sub a"):
         pass

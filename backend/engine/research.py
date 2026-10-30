@@ -23,7 +23,7 @@ from datetime import datetime
 
 from .. import store
 from ..llm import LLMUnavailable, get_llm
-from ..sources import docs, screener
+from ..sources import docs, nse, screener
 
 N_TRANSCRIPTS = 4
 _status: dict[str, dict] = {}
@@ -274,6 +274,22 @@ The ledger is the most important output: for each explicit guidance item in the 
 
 # ------------------------------------------------------------------- build
 
+def _nearest_copy(label: str, copies: list[dict], max_days: int = 75) -> dict | None:
+    """screener labels the call month, NSE the filing date; match within ~2 months."""
+    try:
+        want = datetime.strptime(label, "%b %Y")
+    except ValueError:
+        return copies[0] if copies else None
+    best, best_d = None, None
+    for c in copies:
+        try:
+            d = abs((datetime.strptime(c["label"], "%b %Y") - want).days)
+        except ValueError:
+            continue
+        if d <= max_days and (best_d is None or d < best_d):
+            best, best_d = c, d
+    return best
+
 def build(symbol: str, force: bool = False) -> dict:
     symbol = symbol.upper().strip()
     with _glock:
@@ -297,11 +313,24 @@ def build(symbol: str, force: bool = False) -> dict:
         _set(symbol, step=f"Reading {len(concalls)} concall transcripts", progress=15)
         transcripts: list[dict] = []
         errors: list[str] = []
+        nse_copies: list[dict] | None = None
 
         def tx(cc):
+            nonlocal nse_copies
             try:
                 return extract_transcript(cc["transcript"], cc["label"])
             except Exception as e:
+                # company-hosted link dead or blocked? try the copy filed with NSE
+                if nse_copies is None:
+                    nse_copies = nse.find_transcripts(symbol)
+                alt = _nearest_copy(cc["label"], nse_copies)
+                if alt:
+                    nse_copies.remove(alt)
+                    try:
+                        cc["transcript"] = alt["transcript"]
+                        return extract_transcript(alt["transcript"], cc["label"])
+                    except Exception as e2:
+                        e = e2
                 errors.append(f"transcript {cc['label']}: {str(e)[:100]}")
                 return None
 

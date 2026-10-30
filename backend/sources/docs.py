@@ -97,39 +97,60 @@ MDA_PAT = re.compile(r"management\s+discussion\s+(and|&)\s+analysis", re.I)
 
 
 def annual_report_excerpt(url: str, max_chars: int = 60_000) -> dict:
-    """Opening pages + the MD&A section of an annual report."""
-    key = f"ar|{url}|{max_chars}"
+    """Opening pages + the MD&A section of an annual report.
+
+    Design-heavy reports have dozens of image-only pages up front, so the
+    "opening" is the first text-bearing pages. If no MD&A heading is found,
+    the Board's/Directors' Report (which carries the business review) is used.
+    """
+    key = f"ar2|{url}|{max_chars}"
     hit = store.get("pdf_text", key)
     if hit is not None:
         return hit
-    reader = PdfReader(io.BytesIO(download(url)))
-    n = len(reader.pages)
+    data = download(url)
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        n = len(reader.pages)
 
-    def page(i):
-        try:
-            return _clean(reader.pages[i].extract_text() or "")
-        except Exception:
-            return ""
+        def page(i):
+            try:
+                return _clean(reader.pages[i].extract_text() or "")
+            except Exception:
+                return ""
+        texts = [page(i) for i in range(n)]
+    except Exception:
+        texts = _poppler_pages(data, None)
+        n = len(texts)
 
-    opening = [page(i) for i in range(min(12, n))]
-    # find MD&A: the page where the heading appears with substantial text after it
-    # (skip table-of-contents hits in the first few pages)
-    mda_start = None
-    for i in range(3, n):
-        t = page(i)
-        head = t[:250]
-        if MDA_PAT.search(head) and len(t) > 800 and not re.search(r"auditor|annexure|director.?s.? report", head, re.I):
-            mda_start = i
-            break
+    text_idx = [i for i, t in enumerate(texts) if len(t) > 400]
+    opening = [texts[i] for i in text_idx[:12]]
+
+    def find_start(pattern, skip_tocs=3):
+        for i in text_idx:
+            if i < skip_tocs:
+                continue
+            head = texts[i][:250]
+            if re.search(pattern, head, re.I) and len(texts[i]) > 800 and not re.search(r"auditor|annexure|contents", head, re.I):
+                return i
+        return None
+
+    mda_start = find_start(r"management\s+discussion\s+(and|&)\s+analysis")
+    section = "mda"
+    if mda_start is None:
+        mda_start = find_start(r"(board|directors?)['’]?s?\s+report")
+        section = "boards_report" if mda_start is not None else None
     mda = []
     if mda_start is not None:
-        for i in range(mda_start, min(mda_start + 25, n)):
-            mda.append(page(i))
+        mda = [texts[i] for i in range(mda_start, min(mda_start + 25, n))]
+    elif text_idx:  # last resort: the first substantial text block
+        mda = [texts[i] for i in text_idx[12:37]]
+        section = "first_text"
     result = {
         "pages": n,
         "opening": "\n\n".join(opening)[: max_chars // 3],
         "mda": "\n\n".join(mda)[: max_chars - max_chars // 3],
         "mda_page": (mda_start + 1) if mda_start is not None else None,
+        "section": section,
     }
     store.put("pdf_text", key, result)
     return result
