@@ -1,0 +1,18 @@
+# One-click deploy on Render (https://render.com/docs/blueprint-spec).
+# Set ANTHROPIC_API_KEY or GEMINI_API_KEY in the dashboard after the first deploy;
+# without a key FINN runs rule-based triage and numbers-only research.
+services:
+  - type: web
+    name: finn
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/settings
+    envVars:
+      - key: FINN_DATA_DIR
+        value: /data
+      - key: ANTHROPIC_API_KEY
+        sync: false
+    disk:
+      name: finn-data
+      mountPath: /data
+      sizeGB: 1
