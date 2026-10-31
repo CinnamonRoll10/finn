@@ -2,6 +2,8 @@
 
 Mobile-first prototype for the ENAM AI Engineer Build Challenge.
 
+**Live demo:** https://endif-puzzles-concern-ratings.trycloudflare.com/ (tunnelled from a laptop; open it on a phone). Source: https://github.com/CinnamonRoll10/finn
+
 FINN watches a portfolio of NSE-listed companies and works in two modes:
 
 * **Push** — it tells you what changed and why you should care: a windowed digest of every exchange filing, triaged into *needs attention / worth a glance / routine (hidden)*, plus threshold alerts on end-of-day price and volume that *you* define.

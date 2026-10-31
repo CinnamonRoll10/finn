@@ -7,7 +7,7 @@ Please find my submission for the AI Engineer Build Challenge: **FINN**, a mobil
 
 **Links**
 - Repository: https://github.com/CinnamonRoll10/finn
-- Prototype: <DEMO URL — see "Deploy or demo" in the repo README; paste the public URL here>
+- Prototype: https://endif-puzzles-concern-ratings.trycloudflare.com/ (tunnelled from my laptop; the Render blueprint in the repo deploys the same build)
 - AI build history: attached (`session-export-*.zip`, the full Claude Code session) and summarised in `build-history/transcript.md` in the repo.
 - Covering note: `COVERING_NOTE.md` in the repo (also pasted below).
 
