@@ -1,18 +1,26 @@
-# One-click deploy on Render (https://render.com/docs/blueprint-spec).
-# Set ANTHROPIC_API_KEY or GEMINI_API_KEY in the dashboard after the first deploy;
-# without a key FINN runs rule-based triage and numbers-only research.
+# One-click deploy on Render (https://render.com/docs/blueprint-spec):
+# New + > Blueprint > pick this repo. Then add ANTHROPIC_API_KEY or GEMINI_API_KEY
+# under Environment; without a key FINN runs rule-based triage and serves the
+# pre-built research shipped in seed/, but cannot answer new questions.
+#
+# The free plan sleeps after 15 idle minutes (first request then takes ~1 min)
+# and has no disk, so caches rebuild from seed/ on every boot. For a demo that
+# must open instantly, switch plan to `starter` and uncomment the disk.
 services:
   - type: web
     name: finn
     runtime: docker
-    plan: starter
+    plan: free
+    region: singapore          # closest region to NSE/BSE and screener.in
     healthCheckPath: /api/settings
     envVars:
       - key: FINN_DATA_DIR
         value: /data
       - key: ANTHROPIC_API_KEY
         sync: false
-    disk:
-      name: finn-data
-      mountPath: /data
-      sizeGB: 1
+      - key: GEMINI_API_KEY
+        sync: false
+    # disk:
+    #   name: finn-data
+    #   mountPath: /data
+    #   sizeGB: 1

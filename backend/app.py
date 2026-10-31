@@ -48,6 +48,7 @@ def _warm_loop():
 
 @app.on_event("startup")
 def _startup():
+    store.seed()
     threading.Thread(target=_warm_loop, daemon=True).start()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 

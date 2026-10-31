@@ -25,6 +25,15 @@ cd web && npm install && npm run dev
 
 Open http://localhost:5173 (dev) or http://localhost:8000 (built). It is laid out for a phone; on a desktop it renders as a phone-width column. To try it on your phone, run it on your laptop and open `http://<laptop-ip>:8000`, or `docker build -t finn . && docker run -p 8000:8000 --env-file .env -v finn-data:/data finn` and deploy the image anywhere (Render, Fly, Railway).
 
+### Deploy
+
+The repo ships a `seed/` snapshot of the warmed caches (research dossiers for 25 companies, transcript extractions, filing summaries; ~10 MB, no raw PDFs). On first start the app copies it into its data directory, so a fresh container is fully populated before it has made a single API call. Regenerate it with `scripts/make_seed.py` after `scripts/warm.py`.
+
+* **Render** — `render.yaml` is a Blueprint: *New + → Blueprint → this repo*, then add `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` under Environment. Free plan by default (sleeps when idle); switch to `starter` and uncomment the disk for an always-on demo that keeps caches across deploys.
+* **Anywhere with Docker** — `docker build -t finn . && docker run -p 8000:8000 -e GEMINI_API_KEY=… finn`.
+
+Pick a region near India if you can: NSE and screener.in are quicker, and less likely to rate-limit, from there.
+
 Pre-build everything the demo touches so first open is instant:
 
 ```bash

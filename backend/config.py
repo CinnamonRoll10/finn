@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.getenv("FINN_DATA_DIR", ROOT / "data"))
 CACHE_DIR = DATA_DIR / "cache"
 SETTINGS_FILE = DATA_DIR / "settings.json"
+# A snapshot of warmed caches shipped with the repo/image (see scripts/make_seed.py).
+# Copied into CACHE_DIR on first start so a fresh deploy is populated at once.
+SEED_DIR = Path(os.getenv("FINN_SEED_DIR", ROOT / "seed" / "cache"))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # symbol -> (display name, sector, size bucket)

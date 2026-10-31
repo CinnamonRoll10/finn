@@ -13,6 +13,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend ./backend
 COPY scripts ./scripts
+COPY seed ./seed
 COPY --from=web /web/dist ./web/dist
 ENV FINN_DATA_DIR=/data
 VOLUME ["/data"]

@@ -14,9 +14,34 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .config import CACHE_DIR, DEFAULT_SETTINGS, SETTINGS_FILE
+from .config import CACHE_DIR, DEFAULT_SETTINGS, SEED_DIR, SETTINGS_FILE
 
 _lock = threading.Lock()
+
+
+def seed() -> int:
+    """Copy any seed-cache file that is not already in CACHE_DIR. Returns the count.
+
+    The seed holds the small, provider-independent caches (research dossiers,
+    transcript extractions, filing summaries, parsed PDF text) so a fresh
+    container serves fully-researched companies without spending an hour and
+    an API budget rebuilding them. Raw PDFs are not shipped; anything missing
+    is simply fetched again on demand.
+    """
+    if not SEED_DIR.is_dir():
+        return 0
+    import shutil
+    n = 0
+    for src in SEED_DIR.rglob("*"):
+        if not src.is_file():
+            continue
+        dst = CACHE_DIR / src.relative_to(SEED_DIR)
+        if dst.exists():
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dst)
+        n += 1
+    return n
 
 
 def _path(namespace: str, key: str, ext: str = "json") -> Path:
