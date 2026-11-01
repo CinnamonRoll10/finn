@@ -2,7 +2,7 @@
 
 Mobile-first prototype for the ENAM AI Engineer Build Challenge.
 
-**Live demo:** https://endif-puzzles-concern-ratings.trycloudflare.com/ (tunnelled from a laptop; open it on a phone). Source: https://github.com/CinnamonRoll10/finn
+**Live demo:** https://finn-10sm.onrender.com (open it on a phone; free tier, so the first open after idle takes a minute). Source: https://github.com/CinnamonRoll10/finn
 
 FINN watches a portfolio of NSE-listed companies and works in two modes:
 
