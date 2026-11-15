@@ -76,33 +76,24 @@ Every model call is cached on a hash of its input, so a transcript is read once,
 
 ## How it works
 
-```
-                       PUSH                                          PULL
-NSE corporate-announcements API ─┐                  screener.in ── tables (quarters, P&L, BS, CF, ratios)
-yfinance EOD prices/volumes ─────┤                            └── links: annual report, concall transcripts
-                                 ▼                                              │
-   classify.py  rules on NSE type + subject → 17 categories, base priority      ▼
-   digest.py    window filter, dedupe, mute, tiers            docs.py   PDF → text (pypdf, poppler fallback)
-        │  survivors only                                              AR: opening pages + MD&A section only
-        ▼                                                                       │
-   enrich.summarise   FAST model, 12 filings/call → headline, why, materiality  ▼
-   enrich.results_numbers  FAST model reads the results PDF → Rev/EBITDA/PBT/PAT  research.extract_transcript  FAST, per call
-                           QoQ & YoY computed in Python; screener fallback        research.extract_annual_report FAST
-   enrich.management_change FAST model reads the Reg-30 annexure → bio             research.compute_facts  Python: CAGRs, D/E,
-   prices.summarise  volume × trailing avg, |move| vs threshold → alerts                                  CFO/PAT, cash cycle, YoY
-                                                                                 research.synthesise  SMART model, once per company
-                                                                                        → 8 sections + ledger + bull/bear + questions
-                                                                                 research.ask  SMART model over the cached extractions
+![How FINN works: Push, Network and Pull pipelines feeding one phone app](docs/how-it-works.png)
 
-                                          NETWORK (no model)
-   seed/network.json: people (career, education) · orgs (aliases, ticker, themes) · ecosystem (competitor/supplier/customer)
-   network.find_orgs      names + years out of a filing's bio text, by alias
-   network.link_person    appointee's career x every contact's career, year by year  -> routes with evidence
-   network.for_event      filing -> best-placed contact + what to ask                 -> attached to digest items
-   network.call_sheet     week of filings + ties going cold                           -> calls worth making
-   network.who_to_call    any ticker -> inside / alumni / competitor / supplier / customer / sector
-   network.ask            question -> rules route to a graph lookup; a cheap model plans only when rules miss
-```
+*Drawn in Excalidraw. Source: [`docs/how-it-works.excalidraw`](docs/how-it-works.excalidraw), which opens at [excalidraw.com](https://excalidraw.com).*
+
+| step | module | model |
+|---|---|---|
+| Classify each filing into 17 categories and a base priority, from NSE's own type plus the subject line | `engine/classify.py` | none |
+| Window filter, dedupe, mute, tier into attention / glance / routine | `engine/digest.py` | none |
+| One-line headline and "why it matters" for survivors, twelve filings per call | `engine/enrich.py` | fast |
+| Revenue, EBITDA, PBT, PAT from the results PDF; QoQ and YoY computed in Python, screener as fallback | `engine/enrich.py` | fast |
+| Appointee profile from the Reg-30 disclosure | `engine/enrich.py` | fast |
+| Volume against trailing average, price move against threshold | `sources/prices.py` | none |
+| PDF to text; annual report cut to opening pages plus MD&A | `sources/docs.py` | none |
+| Guidance, tone and themes per transcript; annual-report extraction | `engine/research.py` | fast |
+| CAGRs, leverage, cash conversion, cash cycle, quarterly YoY | `engine/research.py` | none |
+| Eight research sections, the promised-vs-delivered ledger, bull and bear, open questions; then Q&A | `engine/research.py` | smart |
+| Organisations and years out of a filing's bio text; appointee's career against every contact's, year by year | `engine/network.py` | none |
+| Best-placed contact per filing, call sheet, who to call for any ticker, direct questions | `engine/network.py` | none (a fast planner only when rules cannot route a question) |
 
 Design choices worth knowing:
 
@@ -116,31 +107,9 @@ Design choices worth knowing:
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  subgraph Sources
-    NSE[NSE announcements API]
-    YF[yfinance EOD]
-    SCR[screener.in: tables, AR + concall links]
-    INV[Investor: CV, contacts, meeting log]
-  end
-  subgraph FINN[One container: FastAPI + React build]
-    CL[classify: rules]
-    EN[enrich: fast model]
-    RS[research: fast extract, smart synth]
-    NW[network: graph + dates, no model]
-    ST[(disk cache: JSON by content hash)]
-  end
-  NSE --> CL --> EN --> ST
-  YF --> ST
-  SCR --> RS --> ST
-  INV --> NW
-  ST --> NW
-  EN -. public filing text only .-> LLM[(model API)]
-  RS -. public documents only .-> LLM
-  NW --> UI[Phone]
-  ST --> UI
-```
+![FINN architecture: sources, one container with a privacy boundary around network data, the model API and the phone](docs/architecture.png)
+
+*Drawn in Excalidraw. Source: [`docs/architecture.excalidraw`](docs/architecture.excalidraw).*
 
 **Data pipelines.** Filings come from NSE's corporate-announcements API per symbol (cached per symbol and window, refreshed by a 15-minute warm loop), prices from yfinance at end of day, fundamentals from screener.in's standardised tables plus the annual-report and concall PDFs it links to. Everything is cached on disk as JSON keyed by a hash of its input, so a document is fetched and read once. Linking is by three keys: the NSE symbol ties filings, prices and research together; an alias table ties organisation names in free text ("ICICI Group", "Novelis", "HUL") to an organisation and, where listed, its symbol; people are matched on normalised names (titles stripped, fuzzy above 0.92) and then on career overlap by year. People named in filings are indexed per company so they can be asked about later.
 
@@ -168,6 +137,7 @@ seed/network.json   the mock network: 38 synthetic people, organisations with al
 seed/cache/         warmed caches shipped with the image
 web/src/            App.jsx  Today.jsx  Alerts.jsx  Research.jsx  Network.jsx  Ask.jsx  net.jsx  ui.jsx  styles.css
 scripts/            warm.py (pre-build caches)  make_seed.py  export_history.py (AI build history)
+docs/               README diagrams: Excalidraw sources and their PNG exports
 build-history/      readable transcripts of the Claude Code sessions that built this
 ```
 

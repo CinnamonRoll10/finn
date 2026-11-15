@@ -7,3 +7,6 @@ web/node_modules/
 web/dist/
 .DS_Store
 *.zip
+.claude/
+EMAIL.md
+EMAIL.txt
