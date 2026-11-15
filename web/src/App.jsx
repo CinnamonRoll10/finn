@@ -5,8 +5,10 @@ import Today from './Today'
 import Alerts from './Alerts'
 import Research from './Research'
 import Ask from './Ask'
+import Network from './Network'
+import { PersonSheet } from './net'
 
-const TABS = [['today', 'Today'], ['alerts', 'Alerts'], ['research', 'Research'], ['ask', 'Ask']]
+const TABS = [['today', 'Today'], ['alerts', 'Alerts'], ['research', 'Research'], ['network', 'Network'], ['ask', 'Ask']]
 
 export default function App() {
   const [tab, setTab] = useState(() => localStorage.getItem('finn.tab') || 'today')
@@ -17,6 +19,8 @@ export default function App() {
   const [error, setError] = useState(null)
   const [askPrefill, setAskPrefill] = useState(null)
   const [researchSymbol, setResearchSymbol] = useState(null)
+  const [person, setPerson] = useState(null)          // contact whose sheet is open, from any screen
+  const [netVersion, setNetVersion] = useState(0)     // bumps when a contact is logged or erased
   const [seenAlerts, setSeenAlerts] = useState(() => new Set(JSON.parse(localStorage.getItem('finn.seen') || '[]')))
 
   useEffect(() => { localStorage.setItem('finn.tab', tab) }, [tab])
@@ -48,14 +52,17 @@ export default function App() {
     const s = new Set(digest.alerts.map((a) => a.id)); setSeenAlerts(s)
     localStorage.setItem('finn.seen', JSON.stringify([...s]))
   }
+  const networkChanged = () => { setNetVersion((v) => v + 1); loadDigest(win) }
   const unseen = digest ? digest.alerts.filter((a) => !seenAlerts.has(a.id)).length : 0
 
   return (
     <div className="app">
-      {tab === 'today' && <Today digest={digest} loading={loading} error={error} win={win} setWin={setWin} onAsk={onAsk} openResearch={openResearch} />}
-      {tab === 'alerts' && <Alerts digest={digest} settings={settings} saveSettings={saveSettings} reload={() => loadDigest(win)} onAsk={onAsk} openResearch={openResearch} markSeen={markSeen} />}
-      {tab === 'research' && <Research symbol={researchSymbol} setSymbol={setResearchSymbol} onAsk={onAsk} />}
-      {tab === 'ask' && <Ask prefill={askPrefill} openResearch={openResearch} />}
+      {tab === 'today' && <Today digest={digest} loading={loading} error={error} win={win} setWin={setWin} onAsk={onAsk} openResearch={openResearch} openPerson={setPerson} />}
+      {tab === 'alerts' && <Alerts digest={digest} settings={settings} saveSettings={saveSettings} reload={() => loadDigest(win)} onAsk={onAsk} openResearch={openResearch} markSeen={markSeen} openPerson={setPerson} />}
+      {tab === 'research' && <Research symbol={researchSymbol} setSymbol={setResearchSymbol} onAsk={onAsk} openPerson={setPerson} />}
+      {tab === 'network' && <Network openPerson={setPerson} openResearch={openResearch} version={netVersion} />}
+      {tab === 'ask' && <Ask prefill={askPrefill} openResearch={openResearch} openPerson={setPerson} />}
+      {person && <PersonSheet id={person} onClose={() => setPerson(null)} openResearch={openResearch} onChanged={networkChanged} />}
       <nav className="nav"><div className="inner">
         {TABS.map(([k, label]) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>

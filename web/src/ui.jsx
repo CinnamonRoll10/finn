@@ -62,6 +62,7 @@ export const Icon = ({ name }) => {
     alerts: 'M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4',
     research: 'M10 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM14.5 14.5 20 20',
     ask: 'M4 5h16v11H9l-5 4z',
+    network: 'M12 5a2.2 2.2 0 1 1 0 .01M5 18a2.2 2.2 0 1 1 0 .01M19 18a2.2 2.2 0 1 1 0 .01M12 7.4v4.2M12 11.6l-5.4 4.6M12 11.6l5.4 4.6',
   }[name]
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 }

@@ -1,4 +1,4 @@
-# FINN — AI build history
+# FINN — AI build history, session 1: Push and Pull (30–31 Oct 2026)
 
 Readable export of the Claude Code session in which FINN was built (30–31 Oct 2026). User prompts, the assistant's narration, and every tool call it made (file writes, shell commands, browser checks). Tool outputs, screenshots, injected reference material and the model's private reasoning are omitted for length; the raw session export (JSONL) is attached to the submission email.
 

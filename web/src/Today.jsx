@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { fmtNum, pct, sign, timeAgo } from './fmt'
 import { Delta, Masthead, Tag } from './ui'
+import { CallSheet, Pointer, Routes } from './net'
 
 const WINDOWS = [[24, '24h'], [72, '3 days'], [168, '7 days'], [720, '30 days']]
 
-export default function Today({ digest, loading, error, win, setWin, onAsk, openResearch }) {
+export default function Today({ digest, loading, error, win, setWin, onAsk, openResearch, openPerson }) {
   const [custom, setCustom] = useState(false)
   const [routineOpen, setRoutineOpen] = useState(false)
   const items = digest?.items || []
@@ -17,7 +18,7 @@ export default function Today({ digest, loading, error, win, setWin, onAsk, open
     <div className="screen">
       <Masthead right={digest ? `${digest.tape?.length || 0} companies · NSE` : 'NSE · EOD'} />
       <h1>What changed.</h1>
-      <p className="deck">{n ? <>{n.total} filings in the window. <b style={{ fontStyle: 'normal', fontWeight: 500, color: 'var(--ink)' }}>{n.attention}</b> need your attention, {n.glance} worth a glance, {n.routine} routine and hidden.</> : 'Every filing across your portfolio, triaged. Routine paperwork hidden.'}</p>
+      <p className="deck">{n ? <>{n.total} {n.total === 1 ? 'filing' : 'filings'} in the window. <b style={{ fontStyle: 'normal', fontWeight: 500, color: 'var(--ink)' }}>{n.attention}</b> need your attention, {n.glance} worth a glance, {n.routine} routine and hidden.</> : 'Every filing across your portfolio, triaged. Routine paperwork hidden.'}</p>
 
       <div className="seg">
         {WINDOWS.map(([h, l]) => <button key={h} className={!custom && win.hours === h ? 'on' : ''} onClick={() => { setCustom(false); setWin({ hours: h }) }}>{l}</button>)}
@@ -47,10 +48,12 @@ export default function Today({ digest, loading, error, win, setWin, onAsk, open
       {digest && !digest.complete && <p className="kicker" style={{ marginTop: 12 }}><span className="pulse" />Reading {digest.pending} filings for detail</p>}
 
       {digest && attention.length > 0 && <h2>Needs attention <span className="count">{attention.length}</span></h2>}
-      {attention.map((it) => <Entry key={it.id} it={it} onAsk={onAsk} openResearch={openResearch} />)}
+      {attention.map((it) => <Entry key={it.id} it={it} onAsk={onAsk} openResearch={openResearch} openPerson={openPerson} />)}
+
+      {digest && <CallSheet sheet={digest.call_sheet} windowLabel={digest.call_sheet_window} onOpen={openPerson} />}
 
       {digest && glance.length > 0 && <h2>Worth a glance <span className="count">{glance.length}</span></h2>}
-      {glance.length > 0 && <div className="list">{glance.map((it) => <Row key={it.id} it={it} onAsk={onAsk} />)}</div>}
+      {glance.length > 0 && <div className="list">{glance.map((it) => <Row key={it.id} it={it} onAsk={onAsk} openPerson={openPerson} />)}</div>}
 
       {digest && routine.length > 0 && (
         <>
@@ -68,7 +71,7 @@ export default function Today({ digest, loading, error, win, setWin, onAsk, open
   )
 }
 
-function Entry({ it, onAsk, openResearch }) {
+function Entry({ it, onAsk, openResearch, openPerson }) {
   const q = it.category === 'results' ? 'Did this quarter deliver what management guided on the last call?'
     : it.category === 'management_change' ? 'What does this change mean for continuity and strategy?'
     : it.category === 'M&A' ? 'How does this deal fit the strategy and balance sheet?'
@@ -84,7 +87,8 @@ function Entry({ it, onAsk, openResearch }) {
       <div className="tagrow"><Tag cat={it.category} />{it.subtype === 'scheduled' && <Tag tone="grey">date set</Tag>}</div>
       {it.why && it.why !== 'Routine.' && <p className="why" style={{ marginTop: 8 }}>{it.why}</p>}
       {it.results && <Results r={it.results} />}
-      {it.people && <People p={it.people} />}
+      {it.people && <People p={it.people} openPerson={openPerson} />}
+      <Pointer net={it.network} onOpen={openPerson} />
       <div className="actions">
         <button onClick={() => onAsk(it.symbol, q, `${it.name}: ${it.headline}. ${it.why || ''} (${it.nse_type}, ${it.time})`)}>Ask Finn</button>
         <button className="ghost" onClick={() => openResearch(it.symbol)}>Research</button>
@@ -94,17 +98,19 @@ function Entry({ it, onAsk, openResearch }) {
   )
 }
 
-function Row({ it, muted, onAsk }) {
+function Row({ it, muted, onAsk, openPerson }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="row" onClick={() => setOpen(!open)}>
       <div className="main">
         <div className="co"><b>{it.symbol}</b><Tag cat={it.category} /></div>
         <div className={`hl ${muted ? 'muted' : ''}`}>{it.headline}</div>
+        {it.network && !open && <div className="net-hint">In your network: {it.network.lead.name}, who worked in the unit this names</div>}
         {open && (
           <div style={{ marginTop: 6 }}>
             {it.why && <p className="why" style={{ margin: '0 0 6px', fontSize: 13.5, color: 'var(--ink-2)' }}>{it.why}</p>}
             <p className="note" style={{ margin: 0 }}>{it.nse_type} · {it.subject?.slice(0, 220)}</p>
+            {it.network && <div onClick={(e) => e.stopPropagation()}><Pointer net={it.network} onOpen={openPerson} /></div>}
             <div className="entry" style={{ padding: 0, border: 0 }}><div className="actions" style={{ marginTop: 8 }}>
               <button onClick={(e) => { e.stopPropagation(); onAsk(it.symbol, 'What should I make of this filing given the fundamentals?', `${it.name}: ${it.headline} (${it.nse_type})`) }}>Ask Finn</button>
               {it.pdf_url && <a className="ghost" href={it.pdf_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Filing ↗</a>}
@@ -137,7 +143,7 @@ const RowK = ({ row }) => (
   </>
 )
 
-export function People({ p }) {
+export function People({ p, openPerson }) {
   return (
     <div>
       {p.changes.map((c, i) => (
@@ -146,6 +152,7 @@ export function People({ p }) {
           <div className="r">{c.event}{c.effective ? ` · ${c.effective}` : ''} · {c.role}{c.is_kmp ? ' · KMP' : ''}</div>
           {c.background && <div className="b">{c.background}</div>}
           {c.reason && <div className="b" style={{ color: 'var(--ink-3)' }}>Reason given: {c.reason}</div>}
+          {openPerson && <Routes link={c.network} onOpen={openPerson} />}
         </div>
       ))}
       {p.so_what && <p className="why" style={{ marginTop: 8 }}>{p.so_what}</p>}

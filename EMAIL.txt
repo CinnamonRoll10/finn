@@ -1,30 +1,53 @@
+To: assessment@enam.com
+Subject: IIT Kanpur – Founding AI Engineer - 2027
+
 Hi ENAM team,
 
-Please find my submission for the AI Engineer Build Challenge: FINN, a mobile-first financial investment agent for NSE equities.
+My submission for the Founding AI Engineer Build Challenge is FINN, a mobile-first investment agent for NSE equities with Push, Pull and a Network layer woven through both.
 
-LINKS
-- Prototype (open on a phone): https://finn-10sm.onrender.com
-  Deployed on Render's free tier, so the first open after idle takes about a minute.
+Links
+- Prototype (open on a phone): https://finn-10sm.onrender.com (free tier; the first open after idle takes about a minute)
 - Repository: https://github.com/CinnamonRoll10/finn
-- AI build history: attached as a zip (the full Claude Code session), and summarised in build-history/transcript.md in the repo.
-- Covering note: COVERING_NOTE.md in the repo (summarised below).
+- AI build history: https://github.com/CinnamonRoll10/finn/tree/master/build-history (readable transcripts of both Claude Code sessions; the raw session exports are attached)
 
-WHAT I BUILT
-FINN works in two modes.
-Push: a windowed digest of every exchange filing across a 20-stock portfolio, triaged so results, M&A, management changes and litigation surface first and routine paperwork is hidden. Results filings show Revenue, EBITDA, PBT and PAT with QoQ and YoY, read from the results PDF; management changes carry a bio of the incoming person read from the Reg-30 filing. End-of-day price and volume alerts fire against thresholds the user sets.
-Pull: on-demand research on any NSE symbol from primary sources only (annual report, the last four concall transcripts and standardised financials). Its centrepiece is a promised-vs-delivered ledger that grades each guidance statement against the quarter it applied to, plus a grounded Q&A that tags every claim with its source.
+What I built
 
-KEY DECISIONS
-- Rules before models: NSE's own filing types plus regexes classify about 95% of filings for free; only the survivors get a model call.
-- Two model tiers routed by job: a cheap model reads every document once (cached forever on content), a strong model synthesises once per company and answers questions. A full research build costs about $0.07 in API terms, and the app exposes its own usage ledger.
-- Numbers are computed in Python, never generated. The strong model may not do arithmetic or use outside knowledge, and must tag every bullet with its source.
-- Instant digest, background detail: triage returns in milliseconds and enriches while you read.
+One idea runs through it: filings tell you what management wants said; the fastest way to the rest is someone you already know. So every filing that matters ends in a person.
 
-LEFT OUT, DELIBERATELY: intraday prices and native push notifications, BSE filings (their API blocks scripts), news and broker research, auth and multi-user.
-NEXT: guidance as a first-class tracked object with "promise missed" alerts, a results-day diff of this call against the last, batch-API warming, and a voice front-end over the grounded Q&A.
+- Push. A digest of every NSE filing across a 20-stock portfolio for a window you pick (24h default), triaged into needs attention, worth a glance, and routine (hidden behind a count). Results show Revenue, EBITDA, PBT and PAT with QoQ and YoY read from the actual PDF. Management changes show the appointee's background from the Reg-30 profile. Price and volume alerts fire against thresholds you set.
+- Pull. On-demand research on any NSE symbol from primary sources only: the annual report, the last four concall transcripts and standardised financials. The centrepiece is a promised-vs-delivered ledger that grades each guidance statement against the quarter it applied to. Grounded Q&A cites its source for every claim.
+- Network. On a filing: the one contact best placed to explain it, why them, and what to ask. On a management change: routes to the new person, each with its evidence ("both at ICICI Bank 2017–2021") or marked unconfirmed when the filing gives no dates. Across the week: a call sheet of the few calls worth making, including people going cold whose employer just gave you a reason to ring, with an opener to copy. In research: who to call, grouped as inside, alumni, competitors, suppliers, customers and sector, with the research's open questions handed to the people who could answer them. A map view lights up where this week's filings touch your network and lists holdings where you know nobody. One Ask box answers both "who do I know at Swiggy?" and "is profit turning into cash?", by voice if you like.
 
-Thank you for the brief; it was a genuinely enjoyable problem.
+Key decisions and trade-offs
+
+1. The Network uses no model. Matching a filing to people is alias lookup and date arithmetic. It is instant, free, explainable, and no contact's details are ever sent to a model provider. The cost is hand-kept alias and ecosystem tables, which I would extract from annual reports in production.
+2. Quiet over complete. Only attention-tier filings get a person; weak links such as "same college, year unknown" are dropped; when nobody overlaps, it says so. A name on every row would be a contact list.
+3. Rules before models. NSE's own filing types plus regexes classify about 95% of filings for free; only survivors get a model call, batched twelve at a time.
+4. Two model tiers. A cheap model (Claude Haiku 5.5 or Gemini Flash) reads every document once, cached on a content hash; a strong model (Claude Opus 5.5 or Gemini Pro) synthesises once per company and answers questions. Building research for all 25 demo companies and several weeks of digests came to about $2.15 at API list prices, estimated from character counts because I ran it through a Claude subscription; the app shows its own usage ledger at /api/usage.
+5. Numbers are computed, never generated. Growth rates, ratios and tenure overlaps are Python; the model is told not to do arithmetic or use outside knowledge.
+6. Responsive web, one container. No app-store friction for a reviewer with a phone.
+
+Architecture
+
+- Data pipelines. NSE announcements API per symbol, yfinance for end-of-day prices, screener.in for standardised tables and the annual-report and transcript PDFs. All cached on disk by input hash and refreshed by a 15-minute loop. Records link on three keys: the NSE symbol; an alias table that maps organisation names in free text to an organisation and its symbol; and, for people, normalised names followed by career overlap by year.
+- Security and privacy. A contact record holds name, roles and employers with years, education, the investor's own note on how they know them, tie strength and last-contact date. No phone numbers, emails or message content. Nothing about a contact leaves the server; model calls carry public documents only. "Forget" erases a person from every view. For a real deployment: a per-investor store with row-level security and per-investor encryption keys, no cross-investor graph unless explicitly shared, an audit log of every read, enrichment only from the investor's own exports and licensed providers with source recorded per field, an erasure path for the people in the graph under the DPDP Act, and in-region hosting. Current employees of a holding are flagged so the tool never nudges toward unpublished price-sensitive information.
+- LLMs and agents. Models extract and synthesise; code decides. There are no free-roaming agents. Two things act on their own: the digest pipeline on a timer, and the Ask router, which chooses between the network graph and the research Q&A with rules first and a cheap planner only when rules miss.
+- Cloud. One Docker image on Render in Singapore, the closest region to NSE, with a seed snapshot of warmed caches so a cold start is already populated. At scale: a scheduled ingestion worker, Postgres, object storage for PDFs, a separate encrypted store for network data in an India region, and FCM/APNs for real push.
+
+Network data: what I used
+
+Synthetic profiles. The 38 contacts in seed/network.json are invented, built on real organisations so that they overlap with real filings. People named in filings are real and their backgrounds come only from the filing itself. For real use I would start from the investor's own exports (LinkedIn connections export, CRM, calendar) and a licensed profile provider, not scraping.
+
+Deliberately left out
+
+Real profile ingestion, intraday prices and native push notifications, BSE filings (their API blocks scripts), authentication and multi-user, and anything from news or broker research on the pull side.
+
+Where I would take it next
+
+Extract supplier, customer and related-party edges from annual reports so the ecosystem graph builds itself. Infer tie strength from calendar and email metadata, with consent. Treat guidance as a tracked object and push "promise missed" as its own alert. After a call, capture a two-line note by voice and attach it to the company, so the network compounds.
+
+Thank you for the brief. It was a genuinely enjoyable problem.
 
 Best regards,
-<Your name>
-<Phone> | <Institute / programme>
+Prakriti Prasad
+IIT Kanpur · prakritip23@iitk.ac.in · <phone>

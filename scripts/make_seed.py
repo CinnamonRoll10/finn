@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from backend.config import CACHE_DIR, ROOT  # noqa: E402
 
-NAMESPACES = ["research", "extract", "item_summary", "item_enrich", "llm", "screener", "pdf_text"]
+NAMESPACES = ["research", "extract", "item_summary", "item_enrich", "llm", "screener", "pdf_text", "people_seen"]
 SEED = ROOT / "seed" / "cache"
 
 

@@ -9,6 +9,10 @@ Endpoints
   GET  /api/research/{symbol}   POST /api/research/{symbol}/build
   POST /api/ask                 {symbol, question, history?, context?}
   GET  /api/usage
+  GET  /api/network             the investor's network + what today's filings light up
+  GET  /api/network/company/{symbol}   GET /api/network/person/{id}
+  POST /api/network/ask         {question, symbol?}
+  POST /api/network/person/{id}/log    DELETE /api/network/person/{id}
 """
 from __future__ import annotations
 
@@ -25,7 +29,7 @@ from pydantic import BaseModel
 from . import llm as llm_mod
 from . import store
 from .config import PORTFOLIO, RESEARCH_SET, ROOT
-from .engine import digest, research
+from .engine import digest, network, research
 from .sources import prices
 
 app = FastAPI(title="FINN", version="0.1")
@@ -39,8 +43,9 @@ def _warm_loop():
     while True:
         try:
             s = store.load_settings()
-            for h in (24, 72):
+            for h in (24, 72, 168):
                 digest.build_digest(s, hours=h)
+            network.index_people_from_cache()
         except Exception:
             pass
         time.sleep(15 * 60)
@@ -49,6 +54,10 @@ def _warm_loop():
 @app.on_event("startup")
 def _startup():
     store.seed()
+    try:
+        network.index_people_from_cache()
+    except Exception:
+        pass
     threading.Thread(target=_warm_loop, daemon=True).start()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -75,11 +84,22 @@ def get_digest(hours: int | None = None, from_: str | None = Query(None, alias="
     settings = store.load_settings()
     try:
         if from_:
-            return digest.build_digest(settings, start=date.fromisoformat(from_),
-                                       end=date.fromisoformat(to) if to else date.today(), deep=deep)
-        return digest.build_digest(settings, hours=hours, deep=deep)
+            d = digest.build_digest(settings, start=date.fromisoformat(from_),
+                                    end=date.fromisoformat(to) if to else date.today(), deep=deep)
+        else:
+            d = digest.build_digest(settings, hours=hours, deep=deep)
     except Exception as e:
         raise HTTPException(502, f"digest failed: {e}")
+    # the Network is layered on at read time: it is deterministic, takes
+    # milliseconds, and must reflect a contact logged or forgotten a second ago
+    d = network.annotate_digest(d)
+    if (d["window"].get("hours") or 0) < 168 and not from_:
+        # a call is not a same-day reflex: the call sheet always looks back a week
+        week = _recent_items(168)
+        if week:
+            d["call_sheet"] = network.call_sheet(week)
+            d["call_sheet_window"] = "this week"
+    return d
 
 
 @app.get("/api/companies")
@@ -126,7 +146,7 @@ def _safe_build(symbol: str, force: bool):
 
 
 class AskBody(BaseModel):
-    symbol: str
+    symbol: str | None = None
     question: str
     history: list[dict] | None = None
     context: str | None = None
@@ -134,12 +154,77 @@ class AskBody(BaseModel):
 
 @app.post("/api/ask")
 def post_ask(body: AskBody):
+    """One box, two brains: questions about people go to the Network (graph
+    lookups, no model), questions about the business go to the research."""
+    sym = body.symbol.upper() if body.symbol else None
+    if network.is_network_question(body.question) or not sym:
+        return network.ask(body.question, sym, _recent_items())
     try:
-        return research.ask(body.symbol.upper(), body.question, body.history, body.context)
+        return research.ask(sym, body.question, body.history, body.context)
     except LookupError:
         raise HTTPException(409, "Build research for this company first")
     except Exception as e:
         raise HTTPException(502, str(e)[:300])
+
+
+# ------------------------------------------------------------ network
+def _recent_items(hours: int = 168) -> list[dict]:
+    """Filings the Network reasons over: the last week, from cache when warm."""
+    try:
+        d = digest.build_digest(store.load_settings(), hours=hours, deep=False)
+        return network.annotate_digest(d)["items"]
+    except Exception:
+        return []
+
+
+@app.get("/api/network")
+def get_network(hours: int = 168):
+    return network.overview(_recent_items(hours))
+
+
+@app.get("/api/network/company/{symbol}")
+def network_company(symbol: str):
+    symbol = symbol.upper()
+    r = research.get_cached(symbol) or {}
+    _recent_items()  # refreshes the index of people named in filings
+    return network.company_view(symbol, about=r.get("about") or "",
+                                questions=(r.get("sections") or {}).get("questions"))
+
+
+@app.get("/api/network/person/{pid}")
+def network_person(pid: str):
+    p = network.person_view(pid, _recent_items())
+    if not p:
+        raise HTTPException(404, "not in your network")
+    return p
+
+
+class NetAsk(BaseModel):
+    question: str
+    symbol: str | None = None
+
+
+@app.post("/api/network/ask")
+def network_ask(body: NetAsk):
+    return network.ask(body.question, body.symbol.upper() if body.symbol else None, _recent_items())
+
+
+@app.post("/api/network/person/{pid}/log")
+def network_log(pid: str):
+    network.log_contact(pid)
+    return network.person_view(pid, _recent_items())
+
+
+@app.delete("/api/network/person/{pid}")
+def network_forget(pid: str):
+    network.forget(pid)
+    return {"ok": True}
+
+
+@app.post("/api/network/restore")
+def network_restore():
+    network.restore_all()
+    return {"ok": True}
 
 
 @app.get("/api/usage")

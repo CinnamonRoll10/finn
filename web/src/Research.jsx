@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from './api'
 import { fmtNum, pct, sign } from './fmt'
 import { Bars, Bullet, Masthead, Stat } from './ui'
+import { PersonRow, Routes } from './net'
 
-const SECTIONS = [['story', 'Story vs numbers'], ['snapshot', 'Snapshot'], ['trajectory', 'Trajectory'], ['balance', 'Balance & cash'], ['guidance', 'Guidance'], ['bullbear', 'Bull / Bear']]
+const SECTIONS = [['story', 'Story vs numbers'], ['people', 'Who to call'], ['snapshot', 'Snapshot'], ['trajectory', 'Trajectory'], ['balance', 'Balance & cash'], ['guidance', 'Guidance'], ['bullbear', 'Bull / Bear']]
 
-export default function Research({ symbol, setSymbol, onAsk }) {
+export default function Research({ symbol, setSymbol, onAsk, openPerson }) {
   const [companies, setCompanies] = useState([])
   const [query, setQuery] = useState('')
   useEffect(() => { api.companies().then(setCompanies).catch(() => {}) }, [symbol])
@@ -21,15 +22,16 @@ export default function Research({ symbol, setSymbol, onAsk }) {
       <div className="chips">
         {companies.map((c) => <button key={c.symbol} className={`chip ${c.symbol === symbol ? 'on' : ''}`} onClick={() => go(c.symbol)}>{c.research_ready && <span className="dot" />}{c.symbol}</button>)}
       </div>
-      {symbol && <Company key={symbol} symbol={symbol} onAsk={onAsk} meta={companies.find((c) => c.symbol === symbol)} />}
+      {symbol && <Company key={symbol} symbol={symbol} onAsk={onAsk} openPerson={openPerson} meta={companies.find((c) => c.symbol === symbol)} />}
     </div>
   )
 }
 
-function Company({ symbol, onAsk, meta }) {
+function Company({ symbol, onAsk, meta, openPerson }) {
   const [res, setRes] = useState(null)
   const [err, setErr] = useState(null)
   const [tab, setTab] = useState('story')
+  const [net, setNet] = useState(null)
   const timer = useRef(null)
 
   const poll = async () => {
@@ -41,6 +43,7 @@ function Company({ symbol, onAsk, meta }) {
     } catch (e) { setErr(e.message) }
   }
   useEffect(() => { poll(); return () => clearTimeout(timer.current) }, [symbol]) // eslint-disable-line
+  useEffect(() => { api.networkCompany(symbol).then(setNet).catch(() => {}) }, [symbol, res?.status])
   const build = async (force = false) => { setErr(null); await api.buildResearch(symbol, force); poll() }
 
   if (!res) return <div className="skeleton" />
@@ -60,6 +63,7 @@ function Company({ symbol, onAsk, meta }) {
             {err && <div className="err">{err}</div>}
             <p className="deck">Not read yet.</p>
             <button className="btn wide" onClick={() => build(false)}>Build research for {symbol}</button>
+            {net?.count > 0 && <><h2>Meanwhile, who to call <span className="count">{net.count}</span></h2><WhoToCall net={net} openPerson={openPerson} /></>}
           </>
         )}
       </div>
@@ -80,7 +84,9 @@ function Company({ symbol, onAsk, meta }) {
         </div>
       </div>
       {s.one_liner && <p className="one">{s.one_liner}</p>}
-      <div className="tabs">{SECTIONS.map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
+      <div className="tabs">{SECTIONS.map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}{k === 'people' && net?.count > 0 && <sup>{net.count}</sup>}</button>)}</div>
+
+      {tab === 'people' && <WhoToCall net={net} openPerson={openPerson} />}
 
       {tab === 'snapshot' && <>
         <h2 style={{ marginTop: 4 }}>Business</h2><ul className="bullets">{(s.business || []).map((b, i) => <Bullet key={i} text={b} />)}</ul>
@@ -158,6 +164,35 @@ function Company({ symbol, onAsk, meta }) {
         {d.errors?.length > 0 && <> Skipped: {d.errors.join('; ')}</>}
       </p>
     </div>
+  )
+}
+
+function WhoToCall({ net, openPerson }) {
+  if (!net) return <div className="skeleton" />
+  if (!net.count && !net.filing_people.length) {
+    return <div className="empty">Nobody in your network is near {net.name || net.symbol}. Worth fixing before you size up.</div>
+  }
+  return (
+    <>
+      <p className="sub" style={{ marginTop: 0, fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15 }}>The documents say what management wants said. These people can tell you the rest.</p>
+      {net.groups.map((g) => (
+        <div key={g.key}>
+          <h2 style={{ marginTop: 18 }}>{g.label} <span className="count">{g.people.length}</span></h2>
+          <div className="plist">{g.people.map((p) => <PersonRow key={p.id} p={{ ...p, label: p.cold ? 'Going cold' : null }} onOpen={openPerson} />)}</div>
+        </div>
+      ))}
+      {net.filing_people.length > 0 && <>
+        <h2>People in recent filings <span className="count">{net.filing_people.length}</span></h2>
+        {net.filing_people.map((x, i) => (
+          <div className="person" key={i}>
+            <div className="n">{x.person}</div>
+            <div className="r">{x.event} · {x.role}</div>
+            {x.background && <div className="b">{x.background}</div>}
+            <Routes link={x.network} onOpen={openPerson} />
+          </div>
+        ))}
+      </>}
+    </>
   )
 }
 

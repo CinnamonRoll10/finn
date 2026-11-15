@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { CAT_LABEL, fmtNum, pct, sign, timeAgo } from './fmt'
 import { Masthead, Spark, Tag } from './ui'
+import { Pointer } from './net'
 
 const ALERTABLE = ['results', 'M&A', 'management_change', 'fund_raise', 'litigation', 'credit_rating', 'pledging', 'capex', 'dividend', 'bonus_split', 'insider_trading', 'press_release']
 
-export default function Alerts({ digest, settings, saveSettings, reload, onAsk, openResearch, markSeen }) {
+export default function Alerts({ digest, settings, saveSettings, reload, onAsk, openResearch, markSeen, openPerson }) {
   const [th, setTh] = useState(settings?.thresholds || { price_move_pct: 4, volume_multiple: 2, lookback_days: 20 })
   const [cats, setCats] = useState(new Set(settings?.alert_categories || []))
   const [dirty, setDirty] = useState(false)
@@ -13,6 +14,7 @@ export default function Alerts({ digest, settings, saveSettings, reload, onAsk, 
   useEffect(() => { if (settings) { setTh(settings.thresholds); setCats(new Set(settings.alert_categories)) } }, [settings])
 
   const alerts = digest?.alerts || []
+  const items = Object.fromEntries((digest?.items || []).map((i) => [i.id, i]))
   const tape = Object.fromEntries((digest?.tape || []).map((t) => [t.symbol, t]))
   const save = async () => {
     setSaving(true)
@@ -43,6 +45,7 @@ export default function Alerts({ digest, settings, saveSettings, reload, onAsk, 
           </div>
           {a.kind === 'filing' ? <Tag cat={a.category} /> : <Tag tone={a.kind === 'price' ? (a.value > 0 ? 'green' : 'red') : 'amber'}>{a.kind === 'price' ? 'Price move' : 'Volume spike'}</Tag>}
           {a.detail && <p className="why" style={{ marginTop: 8 }}>{a.detail}</p>}
+          <Pointer net={a.network || items[a.item_id]?.network} onOpen={openPerson} />
           <div className="actions">
             <button onClick={() => onAsk(a.symbol, a.kind === 'filing' ? 'Does this change the investment case?' : 'Is there anything in the fundamentals or recent guidance that explains an unusual move?', `${a.name}: ${a.title}. ${a.detail || ''}`)}>Ask Finn</button>
             <button className="ghost" onClick={() => openResearch(a.symbol)}>Research</button>
