@@ -28,7 +28,7 @@ export default function Alerts({ digest, settings, saveSettings, reload, onAsk, 
     <div className="screen">
       <Masthead right={`watching ${settings?.portfolio?.length || 0}`} />
       <h1>Alerts.</h1>
-      <p className="deck">You decide what "unusual" means. Finn watches the close and every filing for it.</p>
+      <p className="deck">You decide what "unusual" means.</p>
 
       <h2>Triggered <span className="count">{alerts.length}</span></h2>
       {!digest && <div className="skeleton" />}

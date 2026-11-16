@@ -15,7 +15,7 @@ export default function Research({ symbol, setSymbol, onAsk, openPerson }) {
   return (
     <div className="screen">
       <Masthead right="primary sources" />
-      {!symbol && <><h1>Research.</h1><p className="deck">Any NSE company, from its annual report and the last four earnings calls. No news, no broker notes.</p></>}
+      {!symbol && <><h1>Research.</h1><p className="deck">Any NSE company, from its annual report and last four earnings calls.</p></>}
       <form onSubmit={(e) => { e.preventDefault(); go(query) }} style={{ marginTop: symbol ? 10 : 4 }}>
         <input type="search" placeholder="Type an NSE symbol, e.g. POLYCAB" value={query} onChange={(e) => setQuery(e.target.value)} autoCapitalize="characters" />
       </form>
@@ -56,7 +56,7 @@ function Company({ symbol, onAsk, meta, openPerson }) {
           <>
             <div className="progress"><i style={{ width: `${p.progress || 5}%` }} /></div>
             <p className="kicker"><span className="pulse" />{p.step || 'Starting'}</p>
-            <p className="note">Four transcripts and the annual report are read by a cheap model, then one strong-model pass. First build takes one to three minutes; after that it is instant.</p>
+            <p className="note">First build takes one to three minutes.</p>
           </>
         ) : (
           <>
@@ -170,11 +170,10 @@ function Company({ symbol, onAsk, meta, openPerson }) {
 function WhoToCall({ net, openPerson }) {
   if (!net) return <div className="skeleton" />
   if (!net.count && !net.filing_people.length) {
-    return <div className="empty">Nobody in your network is near {net.name || net.symbol}. Worth fixing before you size up.</div>
+    return <div className="empty">Nobody in your network is near {net.name || net.symbol}.</div>
   }
   return (
     <>
-      <p className="sub" style={{ marginTop: 0, fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15 }}>The documents say what management wants said. These people can tell you the rest.</p>
       {net.groups.map((g) => (
         <div key={g.key}>
           <h2 style={{ marginTop: 18 }}>{g.label} <span className="count">{g.people.length}</span></h2>

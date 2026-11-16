@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { CAT_LABEL, CAT_TONE, pct, sign } from './fmt'
 
 export const Tag = ({ cat, children, tone }) => (
@@ -6,13 +7,35 @@ export const Tag = ({ cat, children, tone }) => (
 
 export const Delta = ({ v, d = 1 }) => <span className={`d ${sign(v)}`}>{pct(v, d)}</span>
 
+/** Light by default; dark if you tap, and the choice sticks. */
+const currentTheme = () => document.documentElement.dataset.theme || 'light'
+function ThemeToggle() {
+  const [theme, setTheme] = useState(currentTheme)
+  const flip = () => {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    document.documentElement.dataset.theme = next
+    try { localStorage.setItem('finn.theme', next) } catch { /* private mode */ }
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', next === 'dark' ? '#161513' : '#f5f1e8'))
+    setTheme(next)
+  }
+  return (
+    <button className="theme" onClick={flip} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        {theme === 'dark'
+          ? <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" />
+          : <path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z" />}
+      </svg>
+    </button>
+  )
+}
+
 export function Masthead({ right }) {
   const d = new Date()
   const date = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
   return (
     <div className="mast">
       <span className="brand">Fi<i>nn</i></span>
-      <span className="line">{date}<br />{right}</span>
+      <span className="right"><span className="line">{date}<br />{right}</span><ThemeToggle /></span>
     </div>
   )
 }

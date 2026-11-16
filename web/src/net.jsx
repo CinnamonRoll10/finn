@@ -37,7 +37,7 @@ export function Pointer({ net, onOpen }) {
       <span className="who"><b>{l.name}</b><Tie n={l.strength} /></span>
       <span className="w">{l.why}</span>
       <span className="q">Ask: {net.ask}</span>
-      <span className="foot">Last spoke {l.ago}{net.more > 0 && ` · ${net.more} more with a link to this company`}</span>
+      <span className="foot">Last spoke {l.ago}{net.more > 0 && ` · ${net.more} more`}</span>
     </button>
   )
 }
@@ -85,7 +85,6 @@ export function CallSheet({ sheet, windowLabel, onOpen, max = 3 }) {
               <div className="actions">
                 <button onClick={() => copy(c)}>{copied === c.id ? 'Copied' : 'Copy opener'}</button>
                 <button className="ghost" onClick={() => onOpen(c.id)}>Profile</button>
-                {c.kind !== 'context' && <span className="ghost">Going cold</span>}
               </div>
             </div>
           </div>
@@ -173,7 +172,7 @@ export function PersonSheet({ id, onClose, openResearch, onChanged }) {
             {!confirm ? <button className="btn secondary" onClick={() => setConfirm(true)}>Forget</button>
               : <button className="btn danger" onClick={forget}>Erase {p.name.split(' ')[0]}</button>}
           </div>
-          <p className="sources">{p.provenance} Forget removes this person from every view.</p>
+          <p className="sources">{p.provenance}</p>
         </>}
       </div>
     </div>

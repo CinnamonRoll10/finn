@@ -18,7 +18,7 @@ export default function Today({ digest, loading, error, win, setWin, onAsk, open
     <div className="screen">
       <Masthead right={digest ? `${digest.tape?.length || 0} companies · NSE` : 'NSE · EOD'} />
       <h1>What changed.</h1>
-      <p className="deck">{n ? <>{n.total} {n.total === 1 ? 'filing' : 'filings'} in the window. <b style={{ fontStyle: 'normal', fontWeight: 500, color: 'var(--ink)' }}>{n.attention}</b> need your attention, {n.glance} worth a glance, {n.routine} routine and hidden.</> : 'Every filing across your portfolio, triaged. Routine paperwork hidden.'}</p>
+      <p className="deck">{n ? <>{n.total} {n.total === 1 ? 'filing' : 'filings'}. <b>{n.attention}</b> need attention, {n.glance} worth a glance, {n.routine} routine.</> : 'Every filing across your portfolio, triaged.'}</p>
 
       <div className="seg">
         {WINDOWS.map(([h, l]) => <button key={h} className={!custom && win.hours === h ? 'on' : ''} onClick={() => { setCustom(false); setWin({ hours: h }) }}>{l}</button>)}
@@ -59,7 +59,7 @@ export default function Today({ digest, loading, error, win, setWin, onAsk, open
         <>
           <h2>Routine <span className="count">{routine.length}</span></h2>
           {!routineOpen ? (
-            <button className="collapsed" onClick={() => setRoutineOpen(true)}><span>{routine.length} filings hidden: ESOPs, certificates, newspaper ads, meeting notices.</span><span>Show</span></button>
+            <button className="collapsed" onClick={() => setRoutineOpen(true)}><span>{routine.length} routine filings hidden</span><span>Show</span></button>
           ) : (
             <div className="list">{routine.map((it) => <Row key={it.id} it={it} muted onAsk={onAsk} />)}</div>
           )}
@@ -105,7 +105,7 @@ function Row({ it, muted, onAsk, openPerson }) {
       <div className="main">
         <div className="co"><b>{it.symbol}</b><Tag cat={it.category} /></div>
         <div className={`hl ${muted ? 'muted' : ''}`}>{it.headline}</div>
-        {it.network && !open && <div className="net-hint">In your network: {it.network.lead.name}, who worked in the unit this names</div>}
+        {it.network && !open && <div className="net-hint">In your network: {it.network.lead.name}</div>}
         {open && (
           <div style={{ marginTop: 6 }}>
             {it.why && <p className="why" style={{ margin: '0 0 6px', fontSize: 13.5, color: 'var(--ink-2)' }}>{it.why}</p>}

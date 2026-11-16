@@ -43,7 +43,7 @@ export default function Ask({ prefill, openResearch, openPerson }) {
       const r = await api.ask({ symbol: sym === NET ? null : sym, question: q, history: t.slice(-4).map(({ role, text }) => ({ role, text })), context })
       setThreads((cur) => ({ ...cur, [sym]: [...(cur[sym] || []), { role: 'finn', text: r.answer, model: r.model, people: r.people, link: r.link, network: r.kind === 'network' }] }))
     } catch (e) {
-      setThreads((cur) => ({ ...cur, [sym]: [...(cur[sym] || []), { role: 'finn', text: e.message.includes('Build research') ? 'I have not read this company yet. Open Research and build it first, then ask. Questions about who you know work already.' : `Error: ${e.message}` }] }))
+      setThreads((cur) => ({ ...cur, [sym]: [...(cur[sym] || []), { role: 'finn', text: e.message.includes('Build research') ? 'I have not read this company yet. Build it in Research first.' : `Error: ${e.message}` }] }))
     } finally { setBusy(false); ctx.current = null }
   }
   // speak the question: on a phone, between meetings, typing is the slow part
@@ -59,15 +59,15 @@ export default function Ask({ prefill, openResearch, openPerson }) {
 
   return (
     <div className="screen">
-      <Masthead right={isNet ? 'your network · no model' : 'answers cite sources'} />
+      <Masthead right={isNet ? 'your network' : 'answers cite sources'} />
       <h1>Ask.</h1>
       <div className="chips">
         <button className={`chip ${isNet ? 'on' : ''}`} onClick={() => setSymbol(NET)}>MY NETWORK</button>
         {companies.map((c) => <button key={c.symbol} className={`chip ${c.symbol === symbol ? 'on' : ''}`} onClick={() => setSymbol(c.symbol)}>{c.research_ready && <span className="dot" />}{c.symbol}</button>)}
       </div>
-      {isNet && thread.length === 0 && <p className="deck">Ask who you know. Pick a company above to ask about its business instead: one box answers both.</p>}
+      {isNet && thread.length === 0 && <p className="deck">Ask who you know, or pick a company to ask about its business.</p>}
       {!isNet && ready === false && (
-        <div><p className="deck">Finn has not read {symbol} yet. You can still ask who you know there.</p><button className="btn" onClick={() => openResearch(symbol)}>Build it in Research</button></div>
+        <div><p className="deck">Finn has not read {symbol} yet.</p><button className="btn" onClick={() => openResearch(symbol)}>Build it in Research</button></div>
       )}
       {(isNet || ready) && thread.length === 0 && (
         <div className="suggest">
@@ -80,7 +80,7 @@ export default function Ask({ prefill, openResearch, openPerson }) {
             {m.text}
             {m.link && <Routes link={m.link} onOpen={openPerson} />}
             {m.people?.length > 0 && <div className="plist">{m.people.map((p) => <PersonRow key={p.id} p={p} onOpen={openPerson} compact />)}</div>}
-            {m.network && <div className="m">from your network · matched by code, not a model</div>}
+            {m.network && <div className="m">from your network</div>}
             {m.model && <div className="m">{m.model} · primary sources only</div>}
           </div>
         ))}

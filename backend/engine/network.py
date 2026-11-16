@@ -28,8 +28,7 @@ NETWORK_FILE = ROOT / "seed" / "network.json"
 COLD_DAYS = 150           # a tie counts as "going cold" after this long
 MATERIAL = {"results", "M&A", "management_change", "fund_raise", "litigation", "capex",
             "credit_rating", "pledging", "press_release", "bonus_split"}
-UPSI = ("Works there now. Keep it to industry context; do not ask for unpublished "
-        "price-sensitive information.")
+UPSI = "Current employee: industry context only, nothing unpublished."
 
 # which kind of experience explains which kind of event
 EVENT_FN = {
@@ -417,7 +416,7 @@ def link_person(name: str, background: str, symbol: str | None = None, event: st
                 e_to = e["to"] or year
                 if b["from"] is None:
                     consider(who["id"], {"via": "Same employer", "evidence": 2, "confirmed": False,
-                                         "detail": f"{e['role']} at {_org_name(e)}, {_span(e)}. The filing gives no dates for {name.split()[-1]} there, so the overlap is unconfirmed."})
+                                         "detail": f"{e['role']} at {_org_name(e)}, {_span(e)}. No dates in the filing for {name.split()[-1]}."})
                     continue
                 lo, hi = max(e["from"], b["from"]), min(e_to, b["to"] or year)
                 if hi - lo >= 1:
@@ -536,7 +535,7 @@ def warm(items: list[dict], limit: int = 6) -> list[dict]:
             tie = "current" if e["to"] is None else "former"
             out.append({**card(p), "score": round(s, 1), "kind": "reconnect", "symbol": it["symbol"], "item_id": it["id"],
                         "headline": it.get("headline"), "category": it.get("category"),
-                        "why": f"You last spoke {_ago(d)}. Their {tie} employer just gave you a reason.",
+                        "why": f"Last spoke {_ago(d)}. Their {tie} employer just filed.",
                         "knows": e.get("knows") or "", "opener": _opener(p, e, it, True)})
     out.sort(key=lambda x: -x["score"])
     return out[:limit]
@@ -573,7 +572,7 @@ def call_sheet(items: list[dict], limit: int = 4) -> list[dict]:
     for w in warm(items):
         if w["id"] in picks:
             picks[w["id"]]["kind"] = "both"
-            picks[w["id"]]["why"] += f" You last spoke {w['ago']}."
+            picks[w["id"]]["why"] += f" Last spoke {w['ago']}."
         else:
             picks[w["id"]] = {**w, "rank": w["score"] + 12, "ask": None}
     out = sorted(picks.values(), key=lambda x: -x["rank"])
@@ -733,7 +732,7 @@ def person_view(pid: str, items: list[dict] | None = None) -> dict | None:
             "education": [{"inst": _org(ed["inst"]).get("name", ed["inst"]), "degree": ed["degree"], "year": ed["year"]} for ed in p.get("education", [])],
             "themes": p.get("themes", []), "shared": shared, "mutual": uniq[:4], "live": live[:3],
             "caution": UPSI if any(c["to"] is None and c["in_book"] for c in career) else None,
-            "provenance": "Synthetic profile for the demo. In production: the investor's own notes plus the fields the person has published about themselves."}
+            "provenance": "Synthetic profile."}
 
 
 def overview(items: list[dict] | None = None) -> dict:
@@ -802,8 +801,8 @@ def ask(question: str, symbol: str | None = None, items: list[dict] | None = Non
         cold = overview(items)["cold"]
         ppl = w or cold
         return {"kind": "network", "tool": "reconnect",
-                "answer": (f"{len(w)} people you have not spoken to in five months or more have a reason to hear from you this week."
-                           if w else "No filing gives you an excuse this week. These are your strongest ties going cold."),
+                "answer": (f"{len(w)} people going cold whose employer filed this week."
+                           if w else "No filing to use as an excuse this week. Your strongest ties going cold:"),
                 "people": ppl}
     # a person named in a recent filing, or one of your own contacts
     for p in people():
@@ -841,8 +840,8 @@ def ask(question: str, symbol: str | None = None, items: list[dict] | None = Non
             ppl = who_to_call(sym)
             name = company_name(sym)
         direct = [p for p in ppl if p["relation"] in ("inside", "alumni")]
-        ans = (f"{len(direct)} with first-hand experience of {name}, {len(ppl) - len(direct)} around it." if ppl
-               else f"Nobody in your network is connected to {name}. That is a gap worth closing before you size up.")
+        ans = (f"{len(direct)} worked at {name}, {len(ppl) - len(direct)} around it." if ppl
+               else f"Nobody in your network is connected to {name}.")
         return {"kind": "network", "tool": "company", "answer": ans, "people": ppl[:6]}
     ex = expertise(q)
     if ex["people"] and ex["themes"]:

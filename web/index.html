@@ -10,6 +10,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <title>FINN</title>
+    <script>
+      // light unless the reader has chosen dark
+      var t = 'light'; try { t = localStorage.getItem('finn.theme') || 'light' } catch (e) {}
+      document.documentElement.dataset.theme = t
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.setAttribute('content', t === 'dark' ? '#161513' : '#f5f1e8') })
+    </script>
   </head>
   <body>
     <div id="root"></div>

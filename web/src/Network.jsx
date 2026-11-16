@@ -26,9 +26,9 @@ export default function Network({ openPerson, version, openResearch }) {
 
   return (
     <div className="screen">
-      <Masthead right={net ? `${s.people} people · mock network` : 'your network'} />
+      <Masthead right={net ? `${s.people} people · mock data` : 'your network'} />
       <h1>Who knows.</h1>
-      <p className="deck">{net ? <>This week's filings touch <b>{s.lit}</b> of the {s.people} people you know. {s.uncovered.length === 0 ? `Every one of your ${s.book} companies has someone you can call.` : `${s.covered} of your ${s.book} companies have someone you can call.`}</> : 'The people you already know, mapped against what just happened.'}</p>
+      <p className="deck">{net ? <>This week's filings touch <b>{s.lit}</b> of your {s.people} contacts.</> : 'Your contacts, against this week\'s filings.'}</p>
 
       <form onSubmit={(e) => { e.preventDefault(); ask(q) }}>
         <input type="search" placeholder="A company, a theme, or a name from a filing" value={q} onChange={(e) => { setQ(e.target.value); if (!e.target.value) setAns(null) }} />
@@ -50,12 +50,11 @@ export default function Network({ openPerson, version, openResearch }) {
         <Map people={net.people} theme={theme} onOpen={openPerson} />
         <div className="legend">
           <span><i className="lit" />employer filed this week</span>
-          <span><i />quiet</span>
-          <span><i className="cold" />not spoken in 5 months</span>
-          <span>closer to centre = closer to you</span>
+          <span><i className="cold" />going cold</span>
+          <span>nearer = closer tie</span>
         </div>
 
-        <h2>Expertise <span className="count">tap to light the map</span></h2>
+        <h2>Expertise <span className="count">tap one</span></h2>
         <div className="chips wrap">
           {net.themes.slice(0, allThemes ? 99 : 10).map((t) => <button key={t.theme} className={`chip ${theme === t.theme ? 'on' : ''}`} onClick={() => setTheme(theme === t.theme ? null : t.theme)}>{t.theme} · {t.count}</button>)}
           {!allThemes && net.themes.length > 10 && <button className="chip more" onClick={() => setAllThemes(true)}>+{net.themes.length - 10} more</button>}
@@ -64,21 +63,17 @@ export default function Network({ openPerson, version, openResearch }) {
 
         {net.reconnect.length > 0 && <>
           <h2>A reason to call <span className="count">{net.reconnect.length}</span></h2>
-          <p className="sub" style={{ marginTop: 8 }}>People you have not spoken to in five months, whose employer just filed something.</p>
           <div className="plist">{net.reconnect.map((p) => <PersonRow key={p.id} compact p={{ ...p, label: `${p.symbol} · last spoke ${p.ago}`, cold: false, why: p.headline }} onOpen={openPerson} />)}</div>
         </>}
 
         {s.uncovered.length > 0 && <>
-          <h2>Blind spots <span className="count">{s.uncovered.length}</span></h2>
-          <p className="sub" style={{ marginTop: 8 }}>You hold or follow these and know nobody near them.</p>
+          <h2>No one to call <span className="count">{s.uncovered.length}</span></h2>
           <div className="chips wrap">{s.uncovered.map((x) => <button key={x} className="chip" onClick={() => openResearch(x)}>{x}</button>)}</div>
         </>}
 
-        <h2>What Finn was given</h2>
-        <ul className="bullets">{net.investor.gave_finn.map((g, i) => <li key={i}>{g}</li>)}</ul>
         <p className="sources">
-          Every profile here is synthetic. Matching is plain code over careers and dates: no model is shown a contact, and nothing about your network leaves this server.
-          {net.forgotten > 0 && <> {net.forgotten} erased. <button className="linkish" onClick={() => api.restoreNetwork().then(() => api.network().then(setNet))}>Restore demo data</button></>}
+          Mock contacts. Matched by code, never sent to a model.
+          {net.forgotten > 0 && <> {net.forgotten} erased. <button className="linkish" onClick={() => api.restoreNetwork().then(() => api.network().then(setNet))}>Restore</button></>}
         </p>
       </>}
     </div>
