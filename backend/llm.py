@@ -80,13 +80,15 @@ class LLM:
         self.provider = detect_provider()
         self._anthropic = None
         self._gemini = None
+        self._gemini_alias: dict[str, str] = {}  # configured name -> a model this key can actually call
 
     # ------------------------------------------------------------ public
     def available(self) -> bool:
         return self.provider != "none"
 
     def model_for(self, tier: str) -> str:
-        return MODELS.get(self.provider, {}).get(tier, "none")
+        m = MODELS.get(self.provider, {}).get(tier, "none")
+        return self._gemini_alias.get(m, m)
 
     def complete(
         self,
@@ -111,7 +113,7 @@ class LLM:
         if self.provider == "anthropic":
             text, tin, tout = self._call_anthropic(model, tier, system, prompt, max_tokens)
         elif self.provider == "gemini":
-            text, tin, tout = self._call_gemini(model, system, prompt, max_tokens)
+            text, tin, tout = self._call_gemini(model, tier, system, prompt, max_tokens)
         elif self.provider == "claude-cli":
             text, tin, tout = self._call_cli(model, system, prompt)
         else:
@@ -159,16 +161,57 @@ class LLM:
         text = "".join(b.text for b in resp.content if b.type == "text")
         return text, resp.usage.input_tokens, resp.usage.output_tokens
 
-    def _call_gemini(self, model, system, prompt, max_tokens):
+    def _call_gemini(self, model, tier, system, prompt, max_tokens):
         from google import genai
         from google.genai import types
 
         if self._gemini is None:
             self._gemini = genai.Client(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
-        cfg = types.GenerateContentConfig(system_instruction=system, max_output_tokens=max_tokens)
-        resp = self._gemini.models.generate_content(model=model, contents=prompt, config=cfg)
+        # thinking models spend output budget before the first visible token, so leave room
+        cfg = types.GenerateContentConfig(system_instruction=system, max_output_tokens=max(max_tokens, 4000))
+
+        def run(name):
+            return self._gemini.models.generate_content(model=name, contents=prompt, config=cfg)
+
+        try:
+            resp = run(self._gemini_alias.get(model, model))
+        except Exception as e:
+            if "NOT_FOUND" not in str(e) and "404" not in str(e):
+                raise
+            # the configured alias is not served for this key: pick one that is, and remember it
+            alt = self._gemini_pick(tier)
+            if not alt or alt == model:
+                raise
+            self._gemini_alias[model] = alt
+            resp = run(alt)
+        if not (resp.text or "").strip():
+            raise RuntimeError("model returned an empty answer")
         um = resp.usage_metadata
-        return resp.text or "", int(um.prompt_token_count or 0), int(um.candidates_token_count or 0)
+        return resp.text, int(um.prompt_token_count or 0), int(um.candidates_token_count or 0)
+
+    def _gemini_pick(self, tier: str) -> str | None:
+        """Best text model the key can call: a Pro for the smart tier, a Flash for the fast one."""
+        skip = ("embedding", "image", "tts", "audio", "live", "vision", "veo", "imagen", "aqa",
+                "robotics", "computer", "gemma", "learnlm", "native", "customtools")
+        names = []
+        for m in self._gemini.models.list():
+            name = (getattr(m, "name", "") or "").split("/")[-1]
+            actions = getattr(m, "supported_actions", None) or []
+            if not name.startswith("gemini") or any(x in name for x in skip):
+                continue
+            if actions and "generateContent" not in actions:
+                continue
+            names.append(name)
+        want = "pro" if tier == "smart" else "flash"
+
+        def rank(n: str):
+            ver = re.search(r"gemini-(\d+(?:\.\d+)?)", n)
+            return (want in n.split("-"),                               # right family
+                    "lite" not in n,                                     # full-size model
+                    not re.search(r"preview|exp|\d{2}-\d{2}|-\d{3}$", n),  # stable name over dated previews
+                    float(ver.group(1)) if ver else 0.0,                 # newest generation
+                    -len(n))
+        return max(names, key=rank) if names else None
 
     def _call_cli(self, model, system, prompt):
         """Claude Code CLI in print mode. Runs in an empty temp dir so no
