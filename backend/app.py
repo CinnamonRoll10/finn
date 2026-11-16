@@ -164,7 +164,7 @@ def post_ask(body: AskBody):
     except LookupError:
         raise HTTPException(409, "Build research for this company first")
     except Exception as e:
-        raise HTTPException(502, str(e)[:300])
+        raise HTTPException(502, str(e)[:900])
 
 
 # ------------------------------------------------------------ network

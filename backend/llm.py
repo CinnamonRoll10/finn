@@ -173,21 +173,25 @@ class LLM:
         def run(name):
             return self._gemini.models.generate_content(model=name, contents=prompt, config=cfg)
 
+        def unusable(err) -> bool:
+            # not served to this key, or served with no quota on its plan
+            return any(x in str(err) for x in ("NOT_FOUND", "404", "RESOURCE_EXHAUSTED", "429"))
+
+        first = self._gemini_alias.get(model, model)
         try:
-            resp = run(self._gemini_alias.get(model, model))
+            resp = run(first)
         except Exception as e:
-            if "NOT_FOUND" not in str(e) and "404" not in str(e):
+            if not unusable(e):
                 raise
-            # the configured alias is not served for this key: walk the models it lists,
-            # newest first, and remember the first one that answers
+            # walk the models the key lists, best first, and remember the first one that answers
             resp = None
-            for alt in self._gemini_candidates(tier)[:6]:
-                if alt == model:
+            for alt in self._gemini_candidates(tier)[:8]:
+                if alt in (model, first):
                     continue
                 try:
                     resp = run(alt)
                 except Exception as e2:
-                    if "NOT_FOUND" not in str(e2) and "404" not in str(e2):
+                    if not unusable(e2):
                         raise
                     continue
                 self._gemini_alias[model] = alt
