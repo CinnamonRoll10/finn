@@ -136,9 +136,8 @@ backend/
 seed/network.json   the mock network: 38 synthetic people, organisations with aliases, ecosystem edges
 seed/cache/         warmed caches shipped with the image
 web/src/            App.jsx  Today.jsx  Alerts.jsx  Research.jsx  Network.jsx  Ask.jsx  net.jsx  ui.jsx  styles.css
-scripts/            warm.py (pre-build caches)  make_seed.py  export_history.py (AI build history)
+scripts/            warm.py (pre-build caches)  make_seed.py
 docs/               README diagrams: Excalidraw sources and their PNG exports
-build-history/      readable transcripts of the Claude Code sessions that built this
 ```
 
 The engine is not tied to the demo lists: `/api/research/POLYCAB/build` works for any symbol screener.in knows, and `/api/network/company/{symbol}` finds contacts for any ticker: curated competitor and supply-chain edges where they exist, sector themes read from the company's description where they do not.
