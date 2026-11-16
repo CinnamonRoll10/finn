@@ -350,3 +350,14 @@ input:focus { border-color: var(--accent); }
 .mast .right { display: flex; align-items: flex-end; gap: 12px; }
 .theme { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); border: 1px solid var(--rule); border-radius: 50%; flex: 0 0 auto; }
 .theme svg { width: 16px; height: 16px; }
+
+/* answers: the answer, then points, then what to watch */
+.msg.finn { white-space: normal; padding-top: 12px; }
+.msg.user { font-size: 16px; line-height: 1.35; max-width: 88%; }
+.ans .lead { font-family: var(--serif); font-size: 19px; line-height: 1.32; font-weight: 500; letter-spacing: -.01em; color: var(--ink); margin: 0 0 6px; font-variation-settings: 'opsz' 36; }
+.ans p { margin: 8px 0; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
+.ans .kicker { margin: 14px 0 0; }
+.ans .bullets li { font-size: 14.5px; padding: 8px 0 8px 16px; }
+.ans .watch { margin-top: 10px; padding: 6px 0 6px 12px; border-left: 2px solid var(--accent); font-size: 14.5px; line-height: 1.45; }
+.ans .watch .kicker { display: block; margin: 0 0 2px; color: var(--accent-ink); }
+.ans .src { white-space: nowrap; }

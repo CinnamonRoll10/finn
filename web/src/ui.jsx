@@ -77,6 +77,44 @@ export function Bullet({ text }) {
   return <li>{parts.map((p, i) => (p.startsWith('[') ? <Source key={i}>{p.slice(1, -1)}</Source> : p))}</li>
 }
 
+/** Inline text with [Source] tags as chips and **bold** honoured. */
+function Inline({ text }) {
+  return String(text).split(/(\[[^\]]{2,40}\]|\*\*[^*]+\*\*)/g).map((p, i) => (
+    p.startsWith('[') ? <Source key={i}>{p.slice(1, -1)}</Source>
+      : p.startsWith('**') ? <b key={i}>{p.slice(2, -2)}</b> : p
+  ))
+}
+
+/** A model answer laid out to be scanned: the answer first, then points, then what to watch. */
+export function Answer({ text }) {
+  const blocks = []
+  let para = []
+  const flush = () => { if (para.length) { blocks.push({ t: 'p', text: para.join(' ') }); para = [] } }
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim()
+    const bullet = line.match(/^(?:[-•*]|\d+[.)])\s+(.*)$/)
+    const last = blocks[blocks.length - 1]
+    if (!line) flush()
+    else if (bullet) { flush(); if (last?.t === 'ul') last.items.push(bullet[1]); else blocks.push({ t: 'ul', items: [bullet[1]] }) }
+    else if (!para.length && last?.t === 'ul' && !/[:.]$/.test(last.items[last.items.length - 1]) && !/^[A-Z][a-z]+:/.test(line)) last.items[last.items.length - 1] += ' ' + line
+    else if (/^watch\s*:/i.test(line)) { flush(); blocks.push({ t: 'watch', text: line.replace(/^watch\s*:\s*/i, '') }) }
+    else if (line.endsWith(':') && line.length <= 70) { flush(); blocks.push({ t: 'label', text: line.slice(0, -1) }) }
+    else para.push(line)
+  }
+  flush()
+  const lead = blocks.findIndex((b) => b.t === 'p')
+  return (
+    <div className="ans">
+      {blocks.map((b, i) => (
+        b.t === 'ul' ? <ul key={i} className="bullets">{b.items.map((it, j) => <li key={j}><Inline text={it} /></li>)}</ul>
+          : b.t === 'label' ? <div key={i} className="kicker">{b.text}</div>
+            : b.t === 'watch' ? <div key={i} className="watch"><span className="kicker">Watch</span><Inline text={b.text} /></div>
+              : <p key={i} className={i === lead ? 'lead' : ''}><Inline text={b.text} /></p>
+      ))}
+    </div>
+  )
+}
+
 export const Stat = ({ k, v, cls }) => <span><span className="k">{k}</span><b className={cls || 'num'}>{v ?? '–'}</b></span>
 
 export const Icon = ({ name }) => {

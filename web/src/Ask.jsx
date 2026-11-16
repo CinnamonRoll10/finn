@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from './api'
-import { Masthead } from './ui'
+import { Answer, Masthead } from './ui'
 import { PersonRow, Routes } from './net'
 
 const NET = '__network'
@@ -77,7 +77,7 @@ export default function Ask({ prefill, openResearch, openPerson }) {
       <div className="chat">
         {thread.map((m, i) => (
           <div key={i} className={`msg ${m.role}`}>
-            {m.text}
+            {m.role === 'finn' ? <Answer text={m.text} /> : m.text}
             {m.link && <Routes link={m.link} onOpen={openPerson} />}
             {m.people?.length > 0 && <div className="plist">{m.people.map((p) => <PersonRow key={p.id} p={p} onOpen={openPerson} compact />)}</div>}
             {m.network && <div className="m">from your network</div>}

@@ -381,7 +381,11 @@ def build(symbol: str, force: bool = False) -> dict:
 
 ASK_SYSTEM = """You are FINN answering an investor's question about one company.
 Answer ONLY from the research material supplied (numbers, transcript extractions, annual-report extraction). No outside knowledge, no news, no broker views. If the material does not cover it, say so in one line.
-Format: <= 120 words. Lead with the answer. Short lines. Tag facts with sources like [Q1FY27 call], [AR FY26], [Numbers]. Plain text, no markdown headers."""
+Format, strictly:
+Line 1: the direct answer in one sentence of at most 22 words. If the material does not cover the question, say that here.
+Then at most 4 bullets, each starting with "- ": one fact or one step each, at most 20 words, ending with exactly one source tag such as [Q1FY27 call], [AR FY26] or [Numbers].
+Optionally a last line starting with "Watch:" naming the one thing that would change the answer, at most 18 words.
+No headings, no sub-lists, no markdown, no preamble. At most 90 words in all."""
 
 
 def ask(symbol: str, question: str, history: list[dict] | None = None, context: str | None = None) -> dict:
