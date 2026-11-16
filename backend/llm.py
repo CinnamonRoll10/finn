@@ -178,19 +178,29 @@ class LLM:
         except Exception as e:
             if "NOT_FOUND" not in str(e) and "404" not in str(e):
                 raise
-            # the configured alias is not served for this key: pick one that is, and remember it
-            alt = self._gemini_pick(tier)
-            if not alt or alt == model:
+            # the configured alias is not served for this key: walk the models it lists,
+            # newest first, and remember the first one that answers
+            resp = None
+            for alt in self._gemini_candidates(tier)[:6]:
+                if alt == model:
+                    continue
+                try:
+                    resp = run(alt)
+                except Exception as e2:
+                    if "NOT_FOUND" not in str(e2) and "404" not in str(e2):
+                        raise
+                    continue
+                self._gemini_alias[model] = alt
+                break
+            if resp is None:
                 raise
-            self._gemini_alias[model] = alt
-            resp = run(alt)
         if not (resp.text or "").strip():
             raise RuntimeError("model returned an empty answer")
         um = resp.usage_metadata
         return resp.text, int(um.prompt_token_count or 0), int(um.candidates_token_count or 0)
 
-    def _gemini_pick(self, tier: str) -> str | None:
-        """Best text model the key can call: a Pro for the smart tier, a Flash for the fast one."""
+    def _gemini_candidates(self, tier: str) -> list[str]:
+        """Text models the key lists, best first: a Pro for the smart tier, a Flash for the fast one."""
         skip = ("embedding", "image", "tts", "audio", "live", "vision", "veo", "imagen", "aqa",
                 "robotics", "computer", "gemma", "learnlm", "native", "customtools")
         names = []
@@ -208,10 +218,10 @@ class LLM:
             ver = re.search(r"gemini-(\d+(?:\.\d+)?)", n)
             return (want in n.split("-"),                               # right family
                     "lite" not in n,                                     # full-size model
-                    not re.search(r"preview|exp|\d{2}-\d{2}|-\d{3}$", n),  # stable name over dated previews
-                    float(ver.group(1)) if ver else 0.0,                 # newest generation
+                    float(ver.group(1)) if ver else 0.0,                 # newest generation: old ones get closed to new keys
+                    not re.search(r"preview|exp|\d{2}-\d{2}|-\d{3}$", n),  # then a stable name over a dated preview
                     -len(n))
-        return max(names, key=rank) if names else None
+        return sorted(names, key=rank, reverse=True)
 
     def _call_cli(self, model, system, prompt):
         """Claude Code CLI in print mode. Runs in an empty temp dir so no
